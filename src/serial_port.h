@@ -2,8 +2,8 @@
 #define SERIAL_PORT_H
 
 /* Ouverture et configuration d'un port série USB en mode raw (termios).
- * Cible typique : récepteur u-blox C100-F9K, apparaissant sous Linux
- * comme /dev/ttyACM0, vitesse de boot par défaut 9600 bauds. */
+ * Pensé pour le récepteur u-blox C100-F9K, qui apparaît sous Linux comme
+ * /dev/ttyACM0 et démarre à 9600 bauds par défaut. */
 
 /* Descripteur de fichier invalide retourné en cas d'échec. */
 #define SERIAL_PORT_INVALID_FD (-1)

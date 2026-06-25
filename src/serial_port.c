@@ -1,5 +1,5 @@
-/* _DEFAULT_SOURCE : nécessaire pour cfmakeraw() et CRTSCTS (extensions
- * glibc/BSD), masquées par défaut en mode strict -std=c11. */
+/* cfmakeraw() et CRTSCTS sont des extensions glibc/BSD, masquées par
+ * défaut sous -std=c11 strict ; _DEFAULT_SOURCE les rend visibles. */
 #define _DEFAULT_SOURCE
 
 #include "serial_port.h"
@@ -19,8 +19,8 @@ int serial_port_open(const char *device, int baudrate)
         return SERIAL_PORT_INVALID_FD;
     }
 
-    /* Repasser en mode bloquant pour les lectures : O_NONBLOCK n'était
-     * utile que pour éviter un open() bloquant sur certains pilotes USB CDC-ACM. */
+    /* On repasse en bloquant pour les lectures : O_NONBLOCK ne servait
+     * qu'à éviter un open() qui bloque avec certains pilotes USB CDC-ACM. */
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) {
         fprintf(stderr, "serial_port_open: fcntl(F_GETFL) failed: %s\n", strerror(errno));

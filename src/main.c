@@ -19,18 +19,17 @@
 #include "ubx_poll.h"
 #include "ubx_protocol.h"
 
-/* Programme minimal de validation hardware : ouvre le port série du
- * C100-F9K et interroge activement NAV-PVT et ESF-STATUS à intervalle
- * régulier (poll request à payload vide, classe/ID identiques au
- * message normalement poussé). On a constaté sur ce hardware que le
- * push périodique configuré via CFG-MSGOUT (cf module setup_messages,
- * conservé mais non utilisé ici) ne déclenche pas de sortie spontanée
- * tant qu'aucun fix GNSS n'est obtenu — le poll actif fonctionne dans
- * tous les cas, c'est le mécanisme retenu pour cette étape.
+/* Ouvre le port série du C100-F9K et interroge NAV-PVT et ESF-STATUS à
+ * intervalle régulier (une requête de poll à payload vide, sur la même
+ * classe/ID que le message normalement poussé). Le push périodique via
+ * CFG-MSGOUT (voir setup_messages, toujours présent mais inutilisé ici)
+ * ne déclenchait pas de sortie spontanée sur ce hardware tant qu'aucun
+ * fix GNSS n'était acquis ; le poll actif, lui, fonctionne dans tous les
+ * cas, donc c'est le mécanisme retenu.
  *
- * Affiche en hex chaque trame UBX détectée, décode en clair NAV-PVT et
- * ESF-STATUS, et fait avancer fusion_tracker à chaque message décodé.
- * drift_estimator et output_stream ne sont pas encore branchés. */
+ * Chaque trame UBX reçue est affichée en hex, NAV-PVT et ESF-STATUS sont
+ * décodées en clair, et fusion_tracker avance à chaque message décodé.
+ * drift_estimator et output_stream restent à brancher. */
 
 #define POLL_INTERVAL_MS 1000
 #define DEFAULT_DEGRADED_TIMEOUT_MS 30000
@@ -43,9 +42,9 @@ static void handle_sigint(int signum)
     g_stop_requested = 1;
 }
 
-/* Regroupe tout l'état mutable de la boucle principale (tracker de
- * fusion + dernières données décodées de chaque message), passé par
- * pointeur plutôt que stocké en variables globales. */
+/* État mutable de la boucle principale : le tracker de fusion et les
+ * dernières données décodées de chaque message. Regroupé dans une
+ * struct passée par pointeur plutôt qu'en variables globales. */
 typedef struct {
     fusion_tracker_t tracker;
     ubx_nav_pvt_t last_nav_pvt;
@@ -139,7 +138,7 @@ static void dispatch_frame(const ubx_frame_t *frame, watchdog_state_t *state, ui
             esf_status_for_tracker = &state->last_esf_status;
         }
     } else {
-        return; /* message dont fusion_tracker n'a pas besoin */
+        return; /* pas un message qui concerne fusion_tracker */
     }
 
     fusion_state_t prev_state, new_state;
@@ -189,9 +188,9 @@ static void send_poll_requests(int fd)
     }
 }
 
-/* Parse les arguments de ligne de commande : un chemin de périphérique
- * optionnel (positionnel) et --degraded-timeout=<ms> optionnel (dans
- * n'importe quel ordre). */
+/* Lit les arguments de la ligne de commande : un chemin de périphérique
+ * en positionnel, et --degraded-timeout=<ms> en option, peu importe
+ * l'ordre. */
 static void parse_args(int argc, char *argv[], const char **out_device, uint64_t *out_degraded_timeout_ms)
 {
     static const char prefix[] = "--degraded-timeout=";

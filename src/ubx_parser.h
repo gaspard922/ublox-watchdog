@@ -3,14 +3,10 @@
 
 #include <stdint.h>
 
-/* State machine de parsing de trame UBX générique.
- *
- * Scope volontairement limité à la structure de trame (sync bytes,
- * classe, ID, longueur, payload brut, checksum) : aucune interprétation
- * des champs spécifiques à un message (NAV-PVT, ESF-STATUS, etc.) n'est
- * faite ici. Le dispatch et le décodage des messages spécifiques viendront
- * dans un module séparé une fois les offsets exacts vérifiés dans la doc
- * u-blox. */
+/* State machine générique de parsing de trame UBX (sync bytes, classe,
+ * ID, longueur, payload brut, checksum). Elle ne sait rien des champs
+ * propres à un message donné : ce décodage se fait à part, dans
+ * ubx_protocol.c, une fois les offsets vérifiés dans la doc u-blox. */
 
 #define UBX_SYNC_CHAR_1 0xB5
 #define UBX_SYNC_CHAR_2 0x62

@@ -5,12 +5,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Construction d'une requête de poll UBX générique : trame à payload
- * vide qui déclenche une réponse unique du récepteur avec l'état actuel
- * du message demandé (classe/ID identiques à la trame normalement
- * poussée). Utilisé pour NAV-PVT et ESF-STATUS tant que le push
- * périodique via CFG-MSGOUT ne déclenche pas de sortie spontanée sur ce
- * hardware (cf investigation session précédente). */
+/* Construit une requête de poll UBX : une trame à payload vide qui fait
+ * répondre le récepteur une fois avec l'état courant du message demandé
+ * (même classe/ID que la trame normalement poussée). C'est ce qu'on
+ * utilise pour NAV-PVT et ESF-STATUS, le push périodique via CFG-MSGOUT
+ * ne produisant pas de sortie spontanée sur ce hardware. */
 
 /* Construit une trame de poll (sync bytes, classe, ID, longueur=0,
  * checksum) dans out_buf. Retourne false si out_buf_size < 8. */

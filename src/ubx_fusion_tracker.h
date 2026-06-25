@@ -59,14 +59,12 @@ void fusion_tracker_init(fusion_tracker_t *ft, uint64_t degraded_timeout_ms);
  * alors renseignés (état avant/après la transition, et raison sous
  * forme de chaîne statique en lecture seule — ne pas la libérer).
  *
- * Choix d'API : un simple retour booléen + paramètres de sortie plutôt
- * qu'un callback enregistré via un setter séparé. C'est l'approche la
- * plus simple à tester unitairement : un test peut vérifier directement
- * la valeur de retour et les états avant/après sans avoir à mettre en
- * place un contexte de callback (variables statiques ou capture par
- * fermeture, ce qui n'existe pas nativement en C) juste pour observer
- * qu'une transition a eu lieu. Le logging (stderr) reste interne à
- * fusion_tracker_update() et n'est pas conditionné par ce choix. */
+ * On retourne un booléen accompagné de paramètres de sortie plutôt que
+ * de passer par un callback enregistré à part : un test peut lire
+ * directement la valeur de retour et les états avant/après, sans avoir
+ * à bricoler un contexte de callback (le C n'a pas de fermetures). Le
+ * logging vers stderr reste interne à la fonction quel que soit ce
+ * choix. */
 bool fusion_tracker_update(fusion_tracker_t *ft, const ubx_nav_pvt_t *nav_pvt,
                            const ubx_esf_status_t *esf_status, uint64_t now_ms,
                            fusion_state_t *out_previous_state, fusion_state_t *out_new_state,
