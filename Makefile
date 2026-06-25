@@ -7,7 +7,7 @@ BUILD_DIR = build
 
 SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/serial_port.c $(SRC_DIR)/ubx_parser.c \
        $(SRC_DIR)/ubx_protocol.c $(SRC_DIR)/ubx_checksum.c $(SRC_DIR)/ubx_cfg.c \
-       $(SRC_DIR)/ubx_poll.c $(SRC_DIR)/setup_messages.c
+       $(SRC_DIR)/ubx_poll.c $(SRC_DIR)/setup_messages.c $(SRC_DIR)/ubx_fusion_tracker.c
 OBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
 TARGET = $(BUILD_DIR)/ublox-watchdog

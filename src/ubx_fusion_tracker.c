@@ -37,9 +37,11 @@ static void do_transition(fusion_tracker_t *ft, fusion_state_t new_state, uint64
 
 bool fusion_tracker_update(fusion_tracker_t *ft, const ubx_nav_pvt_t *nav_pvt,
                            const ubx_esf_status_t *esf_status, uint64_t now_ms,
-                           fusion_state_t *out_previous_state, fusion_state_t *out_new_state)
+                           fusion_state_t *out_previous_state, fusion_state_t *out_new_state,
+                           const char **out_reason)
 {
     fusion_state_t state_before = ft->current_state;
+    const char *reason = NULL;
 
     if (nav_pvt != NULL) {
         bool fix_now = (nav_pvt->fix_type >= UBX_FIX_3D) && nav_pvt->gnss_fix_ok;
@@ -54,42 +56,50 @@ bool fusion_tracker_update(fusion_tracker_t *ft, const ubx_nav_pvt_t *nav_pvt,
     case FUSION_STATE_UNKNOWN:
         if (nav_pvt != NULL) {
             if (ft->has_gnss_fix) {
-                do_transition(ft, FUSION_STATE_CALIBRATING, now_ms, "premier fix GNSS valide à l'initialisation");
+                reason = "premier fix GNSS valide à l'initialisation";
+                do_transition(ft, FUSION_STATE_CALIBRATING, now_ms, reason);
             } else {
-                do_transition(ft, FUSION_STATE_NOT_CALIBRATED, now_ms, "première donnée NAV-PVT reçue, pas de fix");
+                reason = "première donnée NAV-PVT reçue, pas de fix";
+                do_transition(ft, FUSION_STATE_NOT_CALIBRATED, now_ms, reason);
             }
         }
         break;
 
     case FUSION_STATE_NOT_CALIBRATED:
         if (nav_pvt != NULL && ft->has_gnss_fix) {
-            do_transition(ft, FUSION_STATE_CALIBRATING, now_ms, "fix GNSS valide détecté");
+            reason = "fix GNSS valide détecté";
+            do_transition(ft, FUSION_STATE_CALIBRATING, now_ms, reason);
         }
         break;
 
     case FUSION_STATE_CALIBRATING:
         if (esf_status != NULL && ft->has_gnss_fix && esf_status->fusion_mode == UBX_ESF_FUSION_FUSION) {
-            do_transition(ft, FUSION_STATE_FUSION, now_ms, "fusionMode=FUSION atteint avec fix GNSS valide");
+            reason = "fusionMode=FUSION atteint avec fix GNSS valide";
+            do_transition(ft, FUSION_STATE_FUSION, now_ms, reason);
         }
         break;
 
     case FUSION_STATE_FUSION:
         if (nav_pvt != NULL && !ft->has_gnss_fix) {
-            do_transition(ft, FUSION_STATE_DEGRADED, now_ms, "fix GNSS perdu (fixType<3 ou gnssFixOK=0)");
+            reason = "fix GNSS perdu (fixType<3 ou gnssFixOK=0)";
+            do_transition(ft, FUSION_STATE_DEGRADED, now_ms, reason);
         }
         break;
 
     case FUSION_STATE_DEGRADED:
         if (nav_pvt != NULL && ft->has_gnss_fix) {
-            do_transition(ft, FUSION_STATE_FUSION, now_ms, "fix GNSS redevenu valide avant timeout");
+            reason = "fix GNSS redevenu valide avant timeout";
+            do_transition(ft, FUSION_STATE_FUSION, now_ms, reason);
         } else if (now_ms - ft->state_entered_at_ms > ft->degraded_timeout_ms) {
-            do_transition(ft, FUSION_STATE_LOST, now_ms, "timeout dégradation dépassé");
+            reason = "timeout dégradation dépassé";
+            do_transition(ft, FUSION_STATE_LOST, now_ms, reason);
         }
         break;
 
     case FUSION_STATE_LOST:
         if (nav_pvt != NULL && ft->has_gnss_fix) {
-            do_transition(ft, FUSION_STATE_CALIBRATING, now_ms, "fix GNSS redevenu valide, recalibration nécessaire");
+            reason = "fix GNSS redevenu valide, recalibration nécessaire";
+            do_transition(ft, FUSION_STATE_CALIBRATING, now_ms, reason);
         }
         break;
     }
@@ -100,6 +110,9 @@ bool fusion_tracker_update(fusion_tracker_t *ft, const ubx_nav_pvt_t *nav_pvt,
     }
     if (out_new_state != NULL) {
         *out_new_state = ft->current_state;
+    }
+    if (out_reason != NULL) {
+        *out_reason = reason;
     }
     return transition_occurred;
 }

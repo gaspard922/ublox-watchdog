@@ -55,8 +55,9 @@ void fusion_tracker_init(fusion_tracker_t *ft, uint64_t degraded_timeout_ms);
  * convertie en ms par l'appelant).
  *
  * Retourne true si une transition d'état a eu lieu pendant cet appel.
- * Si non NULL, *out_previous_state et *out_new_state sont alors
- * renseignés (état avant/après la transition).
+ * Si non NULL, *out_previous_state, *out_new_state et *out_reason sont
+ * alors renseignés (état avant/après la transition, et raison sous
+ * forme de chaîne statique en lecture seule — ne pas la libérer).
  *
  * Choix d'API : un simple retour booléen + paramètres de sortie plutôt
  * qu'un callback enregistré via un setter séparé. C'est l'approche la
@@ -68,6 +69,7 @@ void fusion_tracker_init(fusion_tracker_t *ft, uint64_t degraded_timeout_ms);
  * fusion_tracker_update() et n'est pas conditionné par ce choix. */
 bool fusion_tracker_update(fusion_tracker_t *ft, const ubx_nav_pvt_t *nav_pvt,
                            const ubx_esf_status_t *esf_status, uint64_t now_ms,
-                           fusion_state_t *out_previous_state, fusion_state_t *out_new_state);
+                           fusion_state_t *out_previous_state, fusion_state_t *out_new_state,
+                           const char **out_reason);
 
 #endif /* UBX_FUSION_TRACKER_H */

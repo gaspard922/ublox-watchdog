@@ -46,11 +46,11 @@ static void drive_to_fusion(fusion_tracker_t *ft, uint64_t *now_ms)
     ubx_nav_pvt_t good_fix = make_nav_pvt(UBX_FIX_3D, true);
     ubx_esf_status_t fusion_mode = make_esf_status(UBX_ESF_FUSION_FUSION);
 
-    fusion_tracker_update(ft, &no_fix, NULL, *now_ms, NULL, NULL);
+    fusion_tracker_update(ft, &no_fix, NULL, *now_ms, NULL, NULL, NULL);
     *now_ms += 1000;
-    fusion_tracker_update(ft, &good_fix, NULL, *now_ms, NULL, NULL);
+    fusion_tracker_update(ft, &good_fix, NULL, *now_ms, NULL, NULL, NULL);
     *now_ms += 1000;
-    fusion_tracker_update(ft, NULL, &fusion_mode, *now_ms, NULL, NULL);
+    fusion_tracker_update(ft, NULL, &fusion_mode, *now_ms, NULL, NULL, NULL);
     *now_ms += 1000;
 }
 
@@ -65,19 +65,19 @@ static void test_scenario_a_cold_start_to_fusion(void)
     bool transitioned;
 
     ubx_nav_pvt_t no_fix = make_nav_pvt(0, false);
-    transitioned = fusion_tracker_update(&ft, &no_fix, NULL, now_ms, &prev, &next);
+    transitioned = fusion_tracker_update(&ft, &no_fix, NULL, now_ms, &prev, &next, NULL);
     CHECK(transitioned, "A: UNKNOWN -> NOT_CALIBRATED aurait dû se produire");
     CHECK(prev == FUSION_STATE_UNKNOWN && next == FUSION_STATE_NOT_CALIBRATED, "A: états avant/après incorrects (étape 1)");
     now_ms += 1000;
 
     ubx_nav_pvt_t good_fix = make_nav_pvt(UBX_FIX_3D, true);
-    transitioned = fusion_tracker_update(&ft, &good_fix, NULL, now_ms, &prev, &next);
+    transitioned = fusion_tracker_update(&ft, &good_fix, NULL, now_ms, &prev, &next, NULL);
     CHECK(transitioned, "A: NOT_CALIBRATED -> CALIBRATING aurait dû se produire");
     CHECK(prev == FUSION_STATE_NOT_CALIBRATED && next == FUSION_STATE_CALIBRATING, "A: états avant/après incorrects (étape 2)");
     now_ms += 1000;
 
     ubx_esf_status_t fusion_mode = make_esf_status(UBX_ESF_FUSION_FUSION);
-    transitioned = fusion_tracker_update(&ft, NULL, &fusion_mode, now_ms, &prev, &next);
+    transitioned = fusion_tracker_update(&ft, NULL, &fusion_mode, now_ms, &prev, &next, NULL);
     CHECK(transitioned, "A: CALIBRATING -> FUSION aurait dû se produire");
     CHECK(prev == FUSION_STATE_CALIBRATING && next == FUSION_STATE_FUSION, "A: états avant/après incorrects (étape 3)");
     CHECK(ft.current_state == FUSION_STATE_FUSION, "A: état final attendu FUSION");
@@ -93,7 +93,7 @@ static void test_scenario_b_fusion_to_degraded_on_fix_loss(void)
 
     ubx_nav_pvt_t lost_fix = make_nav_pvt(0, false);
     fusion_state_t prev, next;
-    bool transitioned = fusion_tracker_update(&ft, &lost_fix, NULL, now_ms, &prev, &next);
+    bool transitioned = fusion_tracker_update(&ft, &lost_fix, NULL, now_ms, &prev, &next, NULL);
 
     CHECK(transitioned, "B: FUSION -> DEGRADED aurait dû se produire immédiatement sur perte de fix");
     CHECK(prev == FUSION_STATE_FUSION && next == FUSION_STATE_DEGRADED, "B: états avant/après incorrects");
@@ -108,7 +108,7 @@ static void test_scenario_c_degraded_to_lost_after_timeout(void)
     drive_to_fusion(&ft, &now_ms);
 
     ubx_nav_pvt_t lost_fix = make_nav_pvt(0, false);
-    fusion_tracker_update(&ft, &lost_fix, NULL, now_ms, NULL, NULL);
+    fusion_tracker_update(&ft, &lost_fix, NULL, now_ms, NULL, NULL, NULL);
     CHECK(ft.current_state == FUSION_STATE_DEGRADED, "C: précondition DEGRADED non atteinte");
     uint64_t degraded_entered_ms = now_ms;
 
@@ -117,7 +117,7 @@ static void test_scenario_c_degraded_to_lost_after_timeout(void)
      * dépassé, même après plusieurs cycles. */
     for (int i = 1; i <= 5; i++) {
         now_ms = degraded_entered_ms + (uint64_t)i * 5000; /* 5s, 10s, 15s, 20s, 25s */
-        bool transitioned = fusion_tracker_update(&ft, NULL, NULL, now_ms, NULL, NULL);
+        bool transitioned = fusion_tracker_update(&ft, NULL, NULL, now_ms, NULL, NULL, NULL);
         CHECK(!transitioned, "C: transition prématurée vers LOST avant la fin du timeout");
         CHECK(ft.current_state == FUSION_STATE_DEGRADED, "C: devrait rester DEGRADED avant le timeout");
     }
@@ -125,7 +125,7 @@ static void test_scenario_c_degraded_to_lost_after_timeout(void)
     /* Dépasse maintenant le timeout de 30000ms depuis l'entrée en DEGRADED. */
     now_ms = degraded_entered_ms + DEFAULT_DEGRADED_TIMEOUT_MS + 1;
     fusion_state_t prev, next;
-    bool transitioned = fusion_tracker_update(&ft, NULL, NULL, now_ms, &prev, &next);
+    bool transitioned = fusion_tracker_update(&ft, NULL, NULL, now_ms, &prev, &next, NULL);
 
     CHECK(transitioned, "C: DEGRADED -> LOST aurait dû se produire après dépassement du timeout");
     CHECK(prev == FUSION_STATE_DEGRADED && next == FUSION_STATE_LOST, "C: états avant/après incorrects");
@@ -140,7 +140,7 @@ static void test_scenario_d_degraded_to_fusion_before_timeout(void)
     drive_to_fusion(&ft, &now_ms);
 
     ubx_nav_pvt_t lost_fix = make_nav_pvt(0, false);
-    fusion_tracker_update(&ft, &lost_fix, NULL, now_ms, NULL, NULL);
+    fusion_tracker_update(&ft, &lost_fix, NULL, now_ms, NULL, NULL, NULL);
     CHECK(ft.current_state == FUSION_STATE_DEGRADED, "D: précondition DEGRADED non atteinte");
     uint64_t degraded_entered_ms = now_ms;
 
@@ -148,7 +148,7 @@ static void test_scenario_d_degraded_to_fusion_before_timeout(void)
     now_ms = degraded_entered_ms + 5000;
     ubx_nav_pvt_t recovered_fix = make_nav_pvt(UBX_FIX_3D, true);
     fusion_state_t prev, next;
-    bool transitioned = fusion_tracker_update(&ft, &recovered_fix, NULL, now_ms, &prev, &next);
+    bool transitioned = fusion_tracker_update(&ft, &recovered_fix, NULL, now_ms, &prev, &next, NULL);
 
     CHECK(transitioned, "D: DEGRADED -> FUSION aurait dû se produire (fix revenu avant timeout)");
     CHECK(prev == FUSION_STATE_DEGRADED && next == FUSION_STATE_FUSION, "D: états avant/après incorrects (pas de passage par LOST attendu)");
@@ -163,17 +163,17 @@ static void test_scenario_e_lost_to_calibrating_on_fix_recovery(void)
     drive_to_fusion(&ft, &now_ms);
 
     ubx_nav_pvt_t lost_fix = make_nav_pvt(0, false);
-    fusion_tracker_update(&ft, &lost_fix, NULL, now_ms, NULL, NULL);
+    fusion_tracker_update(&ft, &lost_fix, NULL, now_ms, NULL, NULL, NULL);
     uint64_t degraded_entered_ms = now_ms;
 
     now_ms = degraded_entered_ms + DEFAULT_DEGRADED_TIMEOUT_MS + 1;
-    fusion_tracker_update(&ft, NULL, NULL, now_ms, NULL, NULL);
+    fusion_tracker_update(&ft, NULL, NULL, now_ms, NULL, NULL, NULL);
     CHECK(ft.current_state == FUSION_STATE_LOST, "E: précondition LOST non atteinte");
 
     now_ms += 1000;
     ubx_nav_pvt_t recovered_fix = make_nav_pvt(UBX_FIX_3D, true);
     fusion_state_t prev, next;
-    bool transitioned = fusion_tracker_update(&ft, &recovered_fix, NULL, now_ms, &prev, &next);
+    bool transitioned = fusion_tracker_update(&ft, &recovered_fix, NULL, now_ms, &prev, &next, NULL);
 
     CHECK(transitioned, "E: LOST -> CALIBRATING aurait dû se produire au retour du fix");
     CHECK(prev == FUSION_STATE_LOST && next == FUSION_STATE_CALIBRATING, "E: états avant/après incorrects");
